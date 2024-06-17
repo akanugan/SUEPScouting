@@ -236,7 +236,7 @@ runSig = False
 #  runSig = True
 
 process.mmtree = cms.EDAnalyzer('ScoutingNanoAOD',
-    doL1              = cms.bool(False),
+    doL1              = cms.bool(True),
     doData            = cms.bool(not params.isMC and not params.signal),
     doSignal          = cms.bool(runSig), 
     isMC              = cms.bool(params.isMC),
@@ -305,7 +305,7 @@ if(params.isMC):
 #if(params.signal):
   #print("test1",runSig,params.isMC,params.era,(params.isMC and not params.era=="2016"))
   from PhysicsTools.PatUtils.l1PrefiringWeightProducer_cfi import l1PrefiringWeightProducer
-  process.prefiringweight = l1PrefiringWeightProducer.clone(
+  process.prefiringweight = l1PrefiringWeightProducer.clone(        
   ThePhotons           = cms.InputTag("hltScoutingEgammaPacker"),
   TheMuons             = cms.InputTag("hltScoutingMuonPacker"),
   TheJets            = cms.InputTag("hltScoutingPFPacker"),

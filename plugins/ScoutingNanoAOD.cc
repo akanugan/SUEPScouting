@@ -171,7 +171,7 @@ private:
   //std::string label2;
   //edm::InputTag                algInputTag_;       
   //edm::EDGetToken              algToken_;
-  //l1t::L1TGlobalUtil          *l1GtUtils_;
+  l1t::L1TGlobalUtil          *l1GtUtils_;
   //triggerExpression::Data triggerCache_;
   //std::vector<std::string> triggerPathsVector;
   //std::map<std::string, int> triggerPathsMap;
@@ -481,7 +481,7 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
   prefireTokendown         (consumes<double>                                 (edm::InputTag("prefiringweight:nonPrefiringProbDown"))),
 //  genLumiInfoHeadTag_      (consumes<GenLumiInfoHeader>        (iConfig.getParameter<edm::InputTag>("genLumi"))),
   genLumiInfoHeadTag_(consumes<GenLumiInfoHeader,edm::InLumi>(edm::InputTag("generator"))),
-  doL1                     (iConfig.existsAs<bool>("doL1")              ?    iConfig.getParameter<bool>  ("doL1")            : false),
+  doL1                     (iConfig.existsAs<bool>("doL1")              ?    iConfig.getParameter<bool>  ("doL1")            : true),
   doData                   (iConfig.existsAs<bool>("doData")            ?    iConfig.getParameter<bool>  ("doData")            : false),
   doSignal                 (iConfig.existsAs<bool>("doSignal")          ?    iConfig.getParameter<bool>  ("doSignal")            : false),
   isMC                     (iConfig.existsAs<bool>("isMC")              ?    iConfig.getParameter<bool>  ("isMC")            : true),
@@ -503,16 +503,16 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
 {
  // now do whatever initialization is needed
   usesResource("TFileService");
-//  if (doL1) {
-//    //algInputTag_ = iConfig.getParameter<edm::InputTag>("AlgInputTag"); // might not need
-//    //algToken_ = consumes<BXVector<GlobalAlgBlk>>(algInputTag_); // might not need
-//    //l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig,consumesCollector());	
-//  }
-//  else {
-//    l1Seeds_ = std::vector<std::string>();
-//    //l1GtUtils_ = 0;
-//  }
-//
+ if (doL1) {
+   //algInputTag_ = iConfig.getParameter<edm::InputTag>("AlgInputTag"); // might not need
+   //algToken_ = consumes<BXVector<GlobalAlgBlk>>(algInputTag_); // might not need
+   l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig,consumesCollector());	
+ }
+ else {
+   l1Seeds_ = std::vector<std::string>();
+   l1GtUtils_ = 0;
+ }
+
 
  // Access the TFileService
   edm::Service<TFileService> fs;
@@ -2114,14 +2114,26 @@ if(runOffline){
  if (doL1) {
 
     //I seem to recall this function being slow so perhaps cache for a given lumi 
-    //(it only changes on lumi boundaries)  
+    //(it only changes on lumi boundaries)
+    int psColumn = hltPSProv_.prescaleSet(iEvent,iSetup);
+    std::cout <<"PS column "<<psColumn<<std::endl;
+    if(psColumn==0 && iEvent.isRealData()){
+      std::cout <<"PS column zero detected for data, this is unlikely (almost all triggers are disabled in normal menus here) and its more likely that you've not loaded the correct global tag in "<<std::endl;
+    }  
     //note to the reader, what I'm doing is extremely dangerious (a const cast), never do this!           
     //however in this narrow case, it fixes a bug in l1t::L1TGlobalUtil (the method should be const)          
     //and it is safe for this specific instance                                                                                     
     l1t::L1TGlobalUtil& l1GtUtils = const_cast<l1t::L1TGlobalUtil&> (hltPSProv_.l1tGlobalUtil());
 
+
     // For debugging: from https://github.com/Sam-Harper/usercode/blob/09e2252601da473ba02de966930863df57512438/TrigTools/plugins/L1MenuExample.cc
+    // AR debug
     std::cout <<"l1 menu: name decisions prescale "<<std::endl;
+    std::cout << "Size of decisionsFinal: " << l1GtUtils.decisionsFinal().size() << std::endl;
+    for (size_t i = 0; i < l1GtUtils.decisionsFinal().size(); ++i) {
+        const std::pair<std::string, bool>& decision = l1GtUtils.decisionsFinal()[i];
+        std::cout << "Index: " << i << " | Name: " << decision.first << " | Value: " << decision.second << std::endl;
+    }
 
     for(size_t bitNr=0;bitNr<l1GtUtils.decisionsFinal().size();bitNr++){
         const std::string& bitName = l1GtUtils.decisionsFinal()[bitNr].first; // l1GtUtils.decisionsFinal() is of type std::vector<std::pair<std::string,bool> >
@@ -2129,7 +2141,9 @@ if(runOffline){
         bool passInterm = l1GtUtils.decisionsInterm()[bitNr].second; //after mask (?, unsure what this is)
         bool passFinal = l1GtUtils.decisionsFinal()[bitNr].second; //after masks & prescales, true means it gives a L1 accept to the HLT
         int prescale = l1GtUtils.prescales()[bitNr].second;
-        std::cout <<"   "<<bitNr<<" "<<bitName<<" "<<passInitial<<" "<<passInterm<<" "<<passFinal<<" "<<prescale<<std::endl;
+        // if(passFinal !=0){
+        //   std::cout <<"   "<<bitNr<<" "<<bitName<<" "<<passInitial<<" "<<passInterm<<" "<<passFinal<<" "<<prescale<<std::endl;
+        // }
         for(size_t i = 0; i < l1Seeds_.size(); i++){
           std::string l1Name = l1Seeds_[i];
           std::string pathName = bitName;
@@ -2140,11 +2154,11 @@ if(runOffline){
              l1Prescale_.push_back(prescale);
           }
         }
+      if (!l1GtUtils.decisionsFinal().empty() && l1GtUtils.decisionsFinal()[bitNr].first.empty()) {
+        std::cout << "Trigger name is empty for bit number: " << bitNr << std::endl;
+      }
     }
-
-
  }
-
 
  tree->Fill();	
 	
@@ -2194,6 +2208,7 @@ void ScoutingNanoAOD::beginRun(edm::Run const& iRun, edm::EventSetup const& iSet
   bool changed=false;
   hltPSProv_.init(iRun,iSetup,hltProcess_,changed);
   const l1t::L1TGlobalUtil& l1GtUtils = hltPSProv_.l1tGlobalUtil();
+  //l1GtUtils.gtTriggerMenuName() = L1Menu_Collisions2018_0_0_1;
   std::cout <<"l1 menu "<<l1GtUtils.gtTriggerMenuName()<<" version "<<l1GtUtils.gtTriggerMenuVersion()<<" comment "<<std::endl;
   std::cout <<"hlt name "<<hltPSProv_.hltConfigProvider().tableName()<<std::endl;
 
