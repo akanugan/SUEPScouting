@@ -51,7 +51,8 @@ params.register(
 params.register(
     'GlobalTagData', 
     #'101X_dataRun2_HLT_v7',
-    '101X_dataRun2_Prompt_v11', 
+    #'101X_dataRun2_Prompt_v11',
+    '100X_dataRun2_HLT_v3', 
     VarParsing.multiplicity.singleton,VarParsing.varType.string,
     'Process name for the HLT paths'
 )

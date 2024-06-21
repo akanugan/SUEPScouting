@@ -503,15 +503,16 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
 {
  // now do whatever initialization is needed
   usesResource("TFileService");
- if (doL1) {
-   //algInputTag_ = iConfig.getParameter<edm::InputTag>("AlgInputTag"); // might not need
-   //algToken_ = consumes<BXVector<GlobalAlgBlk>>(algInputTag_); // might not need
-   l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig,consumesCollector());	
- }
- else {
-   l1Seeds_ = std::vector<std::string>();
-   l1GtUtils_ = 0;
- }
+//  if (doL1) {
+//    //algInputTag_ = iConfig.getParameter<edm::InputTag>("AlgInputTag"); // might not need
+//    //algToken_ = consumes<BXVector<GlobalAlgBlk>>(algInputTag_); // might not need
+//    //l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig,consumesCollector());	
+//  }
+//  else {
+//    l1Seeds_ = std::vector<std::string>();
+//    //l1GtUtils_ = 0;
+//  }
+//
 
 
  // Access the TFileService
@@ -2112,6 +2113,24 @@ if(runOffline){
  l1Prescale_.clear();
 
  if (doL1) {
+
+  // start from Abhijith's code
+  // l1GtUtils_->retrieveL1(iEvent,iSetup,algToken_);
+  // /*	for( int r = 99; r<280; r++){
+	// string name ("empty");
+	// bool algoName_ = false;
+	// algoName_ = l1GtUtils_->getAlgNameFromBit(r,name);
+	// cout << "getAlgNameFromBit = " << algoName_  << endl;
+	// cout << "L1 bit number = " << r << " ; L1 bit name = " << name << endl;
+	// }*/
+  // for( unsigned int iseed = 0; iseed < l1Seeds_.size(); iseed++ ) {
+  //   bool l1htbit = 0;	
+    
+  //   l1GtUtils_->getFinalDecisionByName(string(l1Seeds_[iseed]), l1htbit);
+  //   cout<<string(l1Seeds_[iseed])<<"  "<<l1htbit<<endl;
+  //   l1Result_.push_back( l1htbit );
+  //   }
+  // end from Abhijith's code
 
     //I seem to recall this function being slow so perhaps cache for a given lumi 
     //(it only changes on lumi boundaries)
