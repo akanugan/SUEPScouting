@@ -2147,11 +2147,14 @@ if(runOffline){
 
     // For debugging: from https://github.com/Sam-Harper/usercode/blob/09e2252601da473ba02de966930863df57512438/TrigTools/plugins/L1MenuExample.cc
     // AR debug
-    std::cout <<"l1 menu: name decisions prescale "<<std::endl;
     std::cout << "Size of decisionsFinal: " << l1GtUtils.decisionsFinal().size() << std::endl;
+    std::cout << "Size of prescales: " << l1GtUtils.prescales().size() << std::endl;
+
+
     for (size_t i = 0; i < l1GtUtils.decisionsFinal().size(); ++i) {
         const std::pair<std::string, bool>& decision = l1GtUtils.decisionsFinal()[i];
-        std::cout << "Index: " << i << " | Name: " << decision.first << " | Value: " << decision.second << std::endl;
+        const std::pair<std::string, bool>& prescales_ = l1GtUtils.prescales()[i];
+        std::cout << "Index: " << i << " | Name: " << decision.first << " | Value: " << decision.second << " | Prescales.first: " << prescales_.first << " | Prescales.second: " << prescales_.second<<  std::endl;
     }
 
     for(size_t bitNr=0;bitNr<l1GtUtils.decisionsFinal().size();bitNr++){
@@ -2161,6 +2164,7 @@ if(runOffline){
         bool passFinal = l1GtUtils.decisionsFinal()[bitNr].second; //after masks & prescales, true means it gives a L1 accept to the HLT
         int prescale = l1GtUtils.prescales()[bitNr].second;
         // if(passFinal !=0){
+        //   std::cout <<"l1 menu: name decisions prescale "<<std::endl;
         //   std::cout <<"   "<<bitNr<<" "<<bitName<<" "<<passInitial<<" "<<passInterm<<" "<<passFinal<<" "<<prescale<<std::endl;
         // }
         for(size_t i = 0; i < l1Seeds_.size(); i++){
