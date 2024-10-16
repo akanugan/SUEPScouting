@@ -59,7 +59,6 @@
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
 #include "L1Trigger/L1TGlobal/interface/L1TGlobalUtil.h"
-#include "L1Trigger/L1TGlobal/interface/L1TGlobalUtil.h"
 #include "DataFormats/L1TGlobal/interface/GlobalAlgBlk.h"
 #include "HLTrigger/HLTcore/interface/TriggerExpressionData.h"
 #include "HLTrigger/HLTcore/interface/TriggerExpressionEvaluator.h"
@@ -127,7 +126,6 @@ private:
   bool jetIDoff(const reco::PFJet &pfjet);
 
   const edm::InputTag triggerResultsTag;
-
   const edm::EDGetTokenT<edm::TriggerResults>             	triggerResultsToken;
   const edm::EDGetTokenT<std::vector<ScoutingMuon> >            muonsToken;
   const edm::EDGetTokenT<std::vector<ScoutingElectron> >  	electronsToken;
@@ -171,11 +169,9 @@ private:
   bool runOffline =false;
   std::string label;
   //std::string label2;
-  edm::InputTag                algInputTag_;       
-  edm::EDGetToken              algToken_;
-  l1t::L1TGlobalUtil          *l1GtUtils_;
-  edm::InputTag l1tResultsTag_;
-  
+  //edm::InputTag                algInputTag_;       
+  //edm::EDGetToken              algToken_;
+  //l1t::L1TGlobalUtil          *l1GtUtils_;
   //triggerExpression::Data triggerCache_;
   //std::vector<std::string> triggerPathsVector;
   //std::map<std::string, int> triggerPathsMap;
@@ -499,7 +495,7 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
   hltPSProv_(iConfig,consumesCollector(),*this), //it needs a referernce to the calling module for some reason, hence the *this   
   hltProcess_(iConfig.getParameter<std::string>("hltProcess")),
   triggerBits_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("bits"))),
-  // l1Seeds_(iConfig.getParameter<std::vector<std::string> >("l1Seeds")),
+  l1Seeds_(iConfig.getParameter<std::vector<std::string> >("l1Seeds")),
   hltSeeds_(iConfig.getParameter<std::vector<std::string> >("hltSeeds"))
   //triggerResultsTag        (iConfig.getParameter<edm::InputTag>("triggerresults")),
   // triggerResultsToken      (consumes<edm::TriggerResults>                    (triggerResultsTag)),
@@ -507,19 +503,16 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
 {
  // now do whatever initialization is needed
   usesResource("TFileService");
- if (doL1) {
-  algInputTag_ = iConfig.getParameter<edm::InputTag>("AlgInputTag"); // might not need
-  algToken_ = consumes<BXVector<GlobalAlgBlk>>(algInputTag_); // might not need
-  l1Seeds_ = iConfig.getParameter<std::vector<std::string> >("l1Seeds");
-  l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig,consumesCollector());
-  //l1tResultsTag_ = iConfig.getParameter<edm::InputTag>("l1tResults");
-  //l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig, consumesCollector(), *this, iConfig.getParameter<edm::InputTag>("l1tResults"), iConfig.getParameter<edm::InputTag>("l1tMenu"));
- }
- else {
-   l1Seeds_ = std::vector<std::string>();
-   l1GtUtils_ = 0;
- }
-
+//  if (doL1) {
+//    //algInputTag_ = iConfig.getParameter<edm::InputTag>("AlgInputTag"); // might not need
+//    //algToken_ = consumes<BXVector<GlobalAlgBlk>>(algInputTag_); // might not need
+//    //l1GtUtils_ = new l1t::L1TGlobalUtil(iConfig,consumesCollector());	
+//  }
+//  else {
+//    l1Seeds_ = std::vector<std::string>();
+//    //l1GtUtils_ = 0;
+//  }
+//
 
  // Access the TFileService
   edm::Service<TFileService> fs;
@@ -911,14 +904,6 @@ void ScoutingNanoAOD::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   hltResultName_.clear();
 
   iEvent.getByToken(triggerBits_, triggerBits);
-  const std::vector<std::pair<std::string, bool>>& algBits = l1GtUtils_->decisionsFinal();
-  for (const auto& algBit : algBits) {
-    //std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
-      if (algBit.second == 1) {  // Only print if decision is true (1)
-        std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
-        //std::cout << algBit.first << std::endl;
-      }
-  }
 
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
   scouting_trig=0; 
@@ -2127,11 +2112,6 @@ if(runOffline){
  l1Prescale_.clear();
 
  if (doL1) {
-    //full L1 menu print
-    // const std::vector<std::string>& algNames = l1GtUtils_->algoNames();
-    // for (const auto& name : algNames) {
-    //   std::cout << "Available L1 seed: " << name << std::endl;
-    // }
 
     // AR debug
     int psColumn = hltPSProv_.prescaleSet(iEvent,iSetup);
@@ -2141,32 +2121,60 @@ if(runOffline){
     }
     // end AR
 
-    l1GtUtils_->retrieveL1(iEvent,iSetup,algToken_);
-    // for(unsigned int r = 0; r<100; r++){
-    //   // string name ("empty");
-    //   // bool algoName_ = false;
-    //   // algoName_ = l1GtUtils_->getAlgNameFromBit(r,name);
-    //   // cout << "getAlgNameFromBit = " << algoName_  << endl;
-    //   // cout << "L1 bit number = " << r << " ; L1 bit name = " << name << endl;
-    // }
-    // for( unsigned int iseed = 0; iseed < l1Seeds_.size(); iseed++ ) {
-    //   bool l1htbit = false;		
-    //   l1GtUtils_->getFinalDecisionByName(string(l1Seeds_[iseed]), l1htbit);
-    //   //cout << "l1Seeds_name: " << l1Seeds_[iseed] << " l1htbit_decision: " << l1htbit  << endl;
-    //   l1Result_.push_back( l1htbit );
-    // }
-    // for (const auto& seed : l1Seeds_) {
-    //   bool decision = false;
-    //   int prescale = -1;
-    //   int mask = -1;
-    //   l1GtUtils_->getFinalDecisionByName(seed, decision);
-    //   l1GtUtils_->getPrescaleByName(seed, prescale);
-    //   std::cout << "Seed: " << seed << " Decision: " << decision 
-    //             << " Prescale: " << prescale << std::endl;
-    // }
-    cout << "**ev" <<endl;
 
-  }
+    //I seem to recall this function being slow so perhaps cache for a given lumi 
+    //(it only changes on lumi boundaries)  
+    //note to the reader, what I'm doing is extremely dangerious (a const cast), never do this!           
+    //however in this narrow case, it fixes a bug in l1t::L1TGlobalUtil (the method should be const)          
+    //and it is safe for this specific instance                                                                                     
+    l1t::L1TGlobalUtil& l1GtUtils = const_cast<l1t::L1TGlobalUtil&> (hltPSProv_.l1tGlobalUtil());
+
+    //AR
+    //std::cout << "Size of decisionsFinal: " << l1GtUtils.().size() << std::endl;
+    std::cout << "Size of prescales: " << l1GtUtils.prescales().size() << std::endl;
+    
+    
+
+    for (size_t i = 0; i < l1GtUtils.decisionsFinal().size(); ++i) {
+      const std::pair<std::string, bool>& decision = l1GtUtils.decisionsFinal()[i];
+      const std::pair<std::string, bool>& prescales_ = l1GtUtils.prescales()[i];
+
+      bool temp = 0;
+      l1GtUtils.getFinalDecisionByName(string(prescales_.first), temp);
+      //cout << "temp: " << temp <<endl;
+      if (string(prescales_.first) != "NULL"){
+        cout << "'" << prescales_.first << "'" << "," << endl;
+      }
+      //std::cout << "Index: " << i << " | Name: " << prescales_.first << " | Value: " << decision.second << " | Prescales.first: " << prescales_.first << " | Prescales.second: " << prescales_.second<<  std::endl;
+    }
+    //end AR
+
+
+    // For debugging: from https://github.com/Sam-Harper/usercode/blob/09e2252601da473ba02de966930863df57512438/TrigTools/plugins/L1MenuExample.cc
+    std::cout <<"l1 menu: name decisions prescale "<<std::endl;
+
+    for(size_t bitNr=0;bitNr<l1GtUtils.decisionsFinal().size();bitNr++){
+        const std::string& bitName = l1GtUtils.decisionsFinal()[bitNr].first; // l1GtUtils.decisionsFinal() is of type std::vector<std::pair<std::string,bool> >
+        bool passInitial = l1GtUtils.decisionsInitial()[bitNr].second; //before masks and prescales, so if we have a 15 GeV electron passing L1_SingleEG10, it will show up as true but will likely not cause a L1 acccept due to the seeds high prescale
+        bool passInterm = l1GtUtils.decisionsInterm()[bitNr].second; //after mask (?, unsure what this is)
+        bool passFinal = l1GtUtils.decisionsFinal()[bitNr].second; //after masks & prescales, true means it gives a L1 accept to the HLT
+        int prescale = l1GtUtils.prescales()[bitNr].second;
+        //std::cout <<"   "<<bitNr<<" "<<bitName<<" "<<passInitial<<" "<<passInterm<<" "<<passFinal<<" "<<prescale<<std::endl;
+        for(size_t i = 0; i < l1Seeds_.size(); i++){
+          std::string l1Name = l1Seeds_[i];
+          std::string pathName = bitName;
+          if(bitName.find(l1Name) != std::string::npos ){
+             //l1bitmap.push_back(std::make_pair(l1seedsvector[i],passFinal));
+             //l1prescalemap.push_back(std::make_pair(l1seedsvector[i],prescale));
+             l1Result_  .push_back(passFinal);
+             l1Prescale_.push_back(prescale);
+          }
+        }
+    }
+
+
+ }
+
 
  tree->Fill();	
 	
