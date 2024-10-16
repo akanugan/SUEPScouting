@@ -911,14 +911,14 @@ void ScoutingNanoAOD::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   hltResultName_.clear();
 
   iEvent.getByToken(triggerBits_, triggerBits);
-  const std::vector<std::pair<std::string, bool>>& algBits = l1GtUtils_->decisionsFinal();
-  for (const auto& algBit : algBits) {
-    //std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
-      if (algBit.second == 1) {  // Only print if decision is true (1)
-        std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
-        //std::cout << algBit.first << std::endl;
-      }
-  }
+  // const std::vector<std::pair<std::string, bool>>& algBits = l1GtUtils_->decisionsFinal();
+  // for (const auto& algBit : algBits) {
+  //   //std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
+  //     if (algBit.second == 1) {  // Only print if decision is true (1)
+  //       std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
+  //       //std::cout << algBit.first << std::endl;
+  //     }
+  // }
 
   const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
   scouting_trig=0; 
@@ -2164,6 +2164,12 @@ if(runOffline){
     //   std::cout << "Seed: " << seed << " Decision: " << decision 
     //             << " Prescale: " << prescale << std::endl;
     // }
+    const std::vector<std::pair<std::string, bool>>& algBits = l1GtUtils_->decisionsFinal();
+    for (const auto& algBit : algBits) {
+      if (algBit.second == 1) {  // Only print if decision is true (1)
+      std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
+      }
+    }
     cout << "**ev" <<endl;
 
   }
