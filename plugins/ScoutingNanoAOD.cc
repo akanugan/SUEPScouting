@@ -195,6 +195,8 @@ private:
   std::vector<int>             l1Prescale_;
   std::vector<bool>            hltResult_;
   std::vector<std::string>     hltResultName_;
+  std::vector<std::string> l1ResultName_;
+  std::map<std::string, int> l1TriggerResults_;
   vector<double>            PSweights;
 
   UInt_t scouting_trig; 
@@ -499,7 +501,7 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
   hltPSProv_(iConfig,consumesCollector(),*this), //it needs a referernce to the calling module for some reason, hence the *this   
   hltProcess_(iConfig.getParameter<std::string>("hltProcess")),
   triggerBits_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("bits"))),
-  // l1Seeds_(iConfig.getParameter<std::vector<std::string> >("l1Seeds")),
+  l1Seeds_(iConfig.getParameter<std::vector<std::string> >("l1Seeds")),
   hltSeeds_(iConfig.getParameter<std::vector<std::string> >("hltSeeds"))
   //triggerResultsTag        (iConfig.getParameter<edm::InputTag>("triggerresults")),
   // triggerResultsToken      (consumes<edm::TriggerResults>                    (triggerResultsTag)),
@@ -528,7 +530,10 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
   tree = fs->make<TTree>("tree"       , "tree");
 
   // Event weights
-    
+  for (const auto& seed : l1Seeds_) {
+    l1TriggerResults_[seed] = 0;
+    tree->Branch((seed).c_str(), &l1TriggerResults_[seed], (seed + "/I").c_str());
+  }  
   tree->Branch("lumSec"		                  ,&lumSec            ,"lumSec/i");
   tree->Branch("run"		                    ,&run                  ,"run/i");
   tree->Branch("event"		                    ,&event_                  ,"event/i");
@@ -541,7 +546,8 @@ ScoutingNanoAOD::ScoutingNanoAOD(const edm::ParameterSet& iConfig):
   tree->Branch("hltResult"                      ,&hltResult_                    );              
   tree->Branch("hltResultName"                  ,&hltResultName_                );              
   tree->Branch("l1Result"		                    ,&l1Result_	                );		
-  tree->Branch("l1Prescale"		                  ,&l1Prescale_                   );		
+  tree->Branch("l1Prescale"		                  ,&l1Prescale_                   );
+  tree->Branch("l1ResultName"                   , &l1ResultName_                );		
   //Electrons
   tree->Branch("n_ele"               	         ,&n_ele                        ,"n_ele/i");
   tree->Branch("Electron_pt"                    ,&Electron_pt                   );
@@ -2125,6 +2131,7 @@ if(runOffline){
  // *
  l1Result_.clear();
  l1Prescale_.clear();
+ l1ResultName_.clear();
 
  if (doL1) {
     //full L1 menu print
@@ -2135,9 +2142,9 @@ if(runOffline){
 
     // AR debug
     int psColumn = hltPSProv_.prescaleSet(iEvent,iSetup);
-    std::cout <<"PS column "<<psColumn<<std::endl;
+    //std::cout <<"PS column "<<psColumn<<std::endl;
     if(psColumn==0 && iEvent.isRealData()){
-    std::cout <<"PS column zero detected for data, this is unlikely (almost all triggers are disabled in normal menus here) and its more likely that you've not loaded the correct global tag in "<<std::endl;
+    //std::cout <<"PS column zero detected for data, this is unlikely (almost all triggers are disabled in normal menus here) and its more likely that you've not loaded the correct global tag in "<<std::endl;
     }
     // end AR
 
@@ -2165,12 +2172,29 @@ if(runOffline){
     //             << " Prescale: " << prescale << std::endl;
     // }
     const std::vector<std::pair<std::string, bool>>& algBits = l1GtUtils_->decisionsFinal();
-    for (const auto& algBit : algBits) {
-      if (algBit.second == 1) {  // Only print if decision is true (1)
-      std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
-      }
+    for (const auto& seed : l1Seeds_) {
+      bool decision = false;
+      int prescale = -1;
+      
+      l1GtUtils_->getFinalDecisionByName(seed, decision);
+      l1TriggerResults_[seed] = decision ? 1 : 0;
+      l1GtUtils_->getPrescaleByName(seed, prescale);
+      
+      l1Result_.push_back(decision);
+      l1Prescale_.push_back(prescale);
+      l1ResultName_.push_back(seed);
+      
+      // Optional: print for debugging
+      //std::cout << "L1 seed: " << seed << ", Decision: " << decision << ", Prescale: " << prescale << std::endl;
     }
-    cout << "**ev" <<endl;
+
+    // for (const auto& algBit : algBits) {
+    //   if (algBit.second == 1) {  // Only print if decision is true (1)
+    //   std::cout << "Available L1 seed: " << algBit.first << ", Decision: " << algBit.second << std::endl;
+    //   l1Result_.push_back(algBit.second);
+    //   }
+    // }
+    //cout << "**ev" <<endl;
 
   }
 
